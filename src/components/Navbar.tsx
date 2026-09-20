@@ -233,6 +233,13 @@ export function Navbar() {
               </div>
             )}
 
+            <Link
+              href="/signup"
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center gap-1"
+            >
+              <span>+ Sign Up</span>
+            </Link>
+
             <button
               onClick={handleLogout}
               className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
