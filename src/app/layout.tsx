@@ -11,7 +11,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: 'SadhanaSync & ISKCON Hierarchy Portal',
+  title: 'ISKCON Sadhana Card Portal',
   description: 'Time-based Vaishnava Sadhana Record & Date-Range Reporting PWA',
   manifest: '/manifest.webmanifest',
   icons: {
@@ -40,8 +40,8 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Sadhana" />
-        <meta name="application-name" content="Sadhana" />
+        <meta name="apple-mobile-web-app-title" content="Sadhana Card" />
+        <meta name="application-name" content="Sadhana Card" />
         <meta name="theme-color" content="#ea580c" />
       </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 font-sans antialiased">

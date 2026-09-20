@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import logoImg from '@/assets/logo.png';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   BookOpen, 
@@ -142,17 +144,21 @@ export function Navbar() {
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <img
-                src="/logo.png"
-                alt="SadhanaSync"
+              <Image
+                src={logoImg}
+                alt="Sadhana Card"
+                width={40}
+                height={40}
+                priority
+                unoptimized
                 className="w-10 h-10 rounded-xl shadow-md group-hover:scale-105 transition-transform object-cover"
               />
               <div>
                 <span className="font-bold text-lg text-slate-900 tracking-tight block leading-tight">
-                  SadhanaSync
+                  Sadhana Card
                 </span>
                 <span className="text-[11px] font-medium text-amber-600 tracking-wider uppercase block">
-                  Discipline &bull; Learning &bull; Devotion
+                  Daily Record &bull; Hierarchy Reports
                 </span>
               </div>
             </Link>

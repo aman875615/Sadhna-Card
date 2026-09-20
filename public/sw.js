@@ -1,8 +1,14 @@
-const CACHE_NAME = 'sadhana-card-v2';
+const CACHE_NAME = 'sadhana-card-v3';
 const STATIC_ASSETS = [
   '/manifest.json',
+  '/manifest.webmanifest',
+  '/logo.png',
+  '/favicon.png',
   '/icon-192.png',
-  '/icon-512.png'
+  '/icon-512.png',
+  '/icon-maskable-192.png',
+  '/icon-maskable-512.png',
+  '/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -40,7 +46,34 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  // Let browser handle navigation and dynamic API requests with network-first
+  const url = new URL(event.request.url);
+
+  // Cache-first for images, fonts, and static media (Instant 0ms load, zero flickering)
+  if (
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.jpg') ||
+    url.pathname.endsWith('.jpeg') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.ico') ||
+    url.pathname.endsWith('.woff2') ||
+    url.pathname.startsWith('/_next/static/media')
+  ) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Network-first for dynamic routes and API
   event.respondWith(
     fetch(event.request).catch(async () => {
       const cached = await caches.match(event.request);

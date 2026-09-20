@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import logoImg from '@/assets/logo.png';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Lock, Mail, UserPlus, ChevronRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
@@ -79,16 +81,20 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <img
-            src="/logo.png"
-            alt="SadhanaSync"
+          <Image
+            src={logoImg}
+            alt="Sadhana Card"
+            width={64}
+            height={64}
+            priority
+            unoptimized
             className="w-16 h-16 rounded-2xl mx-auto shadow-lg object-cover"
           />
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Sign In to SadhanaSync
+            Sign In to Sadhana Card
           </h1>
           <p className="text-xs text-slate-500">
-            Discipline &bull; Learning &bull; Devotional Record
+            ISKCON Daily Sadhana Record & Hierarchy Reports
           </p>
         </div>
 
