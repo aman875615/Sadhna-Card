@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   '/register',
   '/api/auth/login',
   '/api/auth/signup',
+  '/api/auth/logout',
   '/api/auth/hierarchy-options',
   '/manifest.json',
   '/manifest.webmanifest',
@@ -24,8 +25,24 @@ const PUBLIC_PATHS = [
   '/apple-touch-icon.png',
 ];
 
+function isTokenValid(token?: string): boolean {
+  if (!token) return false;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    if (!payload || !payload.exp || !payload.userId) return false;
+    if (Date.now() >= payload.exp * 1000) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  const hasValidAuth = isTokenValid(token);
 
   // Allow static files, images, api auth, and next internals
   if (
@@ -34,23 +51,32 @@ export function proxy(request: NextRequest) {
     pathname.includes('.') ||
     PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'))
   ) {
-    const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-    if (token && (pathname === '/login' || pathname === '/signup' || pathname === '/register')) {
+    // If logged in with valid token, redirect away from auth pages to home
+    if (hasValidAuth && (pathname === '/login' || pathname === '/signup' || pathname === '/register')) {
       return NextResponse.redirect(new URL('/', request.url));
     }
+    
+    // If invalid token on public pages, clear invalid cookie
+    if (token && !hasValidAuth) {
+      const res = NextResponse.next();
+      res.cookies.delete(AUTH_COOKIE_NAME);
+      return res;
+    }
+
     return NextResponse.next();
   }
 
-  // Check for authentication cookie
-  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-
-  // If no auth token, redirect to login page
-  if (!token) {
+  // If not authenticated, redirect to login page and clean up any bad cookie
+  if (!hasValidAuth) {
     const loginUrl = new URL('/login', request.url);
     if (pathname !== '/') {
       loginUrl.searchParams.set('redirect', pathname);
     }
-    return NextResponse.redirect(loginUrl);
+    const res = NextResponse.redirect(loginUrl);
+    if (token) {
+      res.cookies.delete(AUTH_COOKIE_NAME);
+    }
+    return res;
   }
 
   return NextResponse.next();
