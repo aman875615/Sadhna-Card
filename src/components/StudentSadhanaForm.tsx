@@ -19,12 +19,14 @@ import { evaluateDailyEntry, DailyScoredResult, TARGET_CONFIG } from '@/lib/scor
 
 interface StudentSadhanaFormProps {
   selectedDate: string;
+  currentUser?: any;
   initialEntry?: any;
   onSaved?: () => void;
 }
 
 export function StudentSadhanaForm({
   selectedDate,
+  currentUser,
   initialEntry,
   onSaved,
 }: StudentSadhanaFormProps) {
@@ -196,6 +198,38 @@ export function StudentSadhanaForm({
         {error && (
           <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold">
             {error}
+          </div>
+        )}
+
+        {/* Devotee Info Banner */}
+        {currentUser && (
+          <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-100/50 border border-blue-200/80 rounded-3xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black flex items-center justify-center shadow-md text-base">
+                {currentUser.name?.[0]?.toUpperCase() || 'S'}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-black text-base text-slate-900">{currentUser.name}</h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-600 text-white shadow-xs">
+                    Student (Card S2)
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  <span className="font-semibold text-slate-700">{currentUser.email}</span>
+                  {currentUser.preacher?.name && (
+                    <span className="ml-2 text-indigo-700 font-medium">&bull; Preacher: {currentUser.preacher.name}</span>
+                  )}
+                  {currentUser.counsellor?.name && (
+                    <span className="ml-2 text-amber-700 font-medium">&bull; Counsellor: {currentUser.counsellor.name}</span>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="bg-white/80 backdrop-blur px-3.5 py-2 rounded-2xl border border-blue-200 shadow-2xs text-right">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block tracking-wider">Entry Date</span>
+              <span className="text-xs font-black text-blue-900">{selectedDate}</span>
+            </div>
           </div>
         )}
 
@@ -522,8 +556,11 @@ export function StudentSadhanaForm({
             <div>
               <h3 className="text-base font-black text-slate-900 flex items-center gap-1.5">
                 <Award className="w-5 h-5 text-amber-600" />
-                Student Score
+                Scorecard
               </h3>
+              <p className="text-xs font-bold text-blue-700 truncate max-w-[150px]">
+                {currentUser?.name || 'Student BACE'}
+              </p>
               <p className="text-[11px] text-slate-400">Date: {selectedDate}</p>
             </div>
             <div className="text-right">

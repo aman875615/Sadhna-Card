@@ -419,12 +419,14 @@ export default function HomePage() {
       {isBrahmachari ? (
         <BrahmachariSadhanaForm
           selectedDate={selectedDate}
+          currentUser={currentUser}
           initialEntry={initialEntry}
           onSaved={() => fetchMyEntry(selectedDate)}
         />
       ) : (
         <StudentSadhanaForm
           selectedDate={selectedDate}
+          currentUser={currentUser}
           initialEntry={initialEntry}
           onSaved={() => fetchMyEntry(selectedDate)}
         />
