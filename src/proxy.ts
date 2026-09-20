@@ -32,6 +32,8 @@ function isTokenValid(token?: string): boolean {
     if (parts.length !== 3) return false;
     const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
     if (!payload || !payload.exp || !payload.userId) return false;
+    // Must be a valid 24-character hexadecimal MongoDB ObjectId
+    if (!/^[0-9a-fA-F]{24}$/.test(payload.userId)) return false;
     if (Date.now() >= payload.exp * 1000) return false;
     return true;
   } catch {

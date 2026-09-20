@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getSessionUser } from '@/lib/auth';
+import { AUTH_COOKIE_NAME, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
     const sessionUser = await getSessionUser();
     if (!sessionUser) {
-      return NextResponse.json({ user: null }, { status: 200 });
+      const res = NextResponse.json({ user: null }, { status: 200 });
+      res.cookies.delete(AUTH_COOKIE_NAME);
+      return res;
     }
 
     // Also fetch all available users for quick switch demo

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Calendar, 
   Sparkles, 
@@ -22,6 +23,7 @@ import { StudentSadhanaForm } from '@/components/StudentSadhanaForm';
 import { BrahmachariSadhanaForm } from '@/components/BrahmachariSadhanaForm';
 
 export default function HomePage() {
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -80,7 +82,7 @@ export default function HomePage() {
           setMyStudents(treeData.students || []);
         }
       } else {
-        window.location.href = '/login';
+        router.replace('/login');
       }
     } catch (e) {
       console.error(e);

@@ -44,7 +44,7 @@ export async function getSessionUser() {
     }
 
     const payload = verifyToken(token);
-    if (!payload) {
+    if (!payload || !payload.userId || !/^[0-9a-fA-F]{24}$/.test(payload.userId)) {
       return null;
     }
 
