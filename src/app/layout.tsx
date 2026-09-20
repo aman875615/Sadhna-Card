@@ -11,12 +11,13 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: 'ISKCON Sadhana Card & Hierarchy Portal',
+  title: 'SadhanaSync & ISKCON Hierarchy Portal',
   description: 'Time-based Vaishnava Sadhana Record & Date-Range Reporting PWA',
-  manifest: '/manifest.json',
+  manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/icon-192.png',
-    apple: '/icon-192.png',
+    icon: '/favicon.png',
+    shortcut: '/icon-192.png',
+    apple: '/apple-touch-icon.png',
   },
 };
 

@@ -12,20 +12,26 @@ const PUBLIC_PATHS = [
   '/api/auth/signup',
   '/api/auth/hierarchy-options',
   '/manifest.json',
+  '/manifest.webmanifest',
   '/sw.js',
   '/favicon.ico',
   '/favicon.png',
+  '/logo.png',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon-maskable-192.png',
+  '/icon-maskable-512.png',
+  '/apple-touch-icon.png',
 ];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow static files, api auth, and next internals
+  // Allow static files, images, api auth, and next internals
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
+    pathname.includes('.') ||
     PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'))
   ) {
     const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
