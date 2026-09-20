@@ -14,14 +14,15 @@ async function main() {
   const passwordHash = await bcrypt.hash('password123', 10);
 
   // 1. Admin
+  const adminPasswordHash = await bcrypt.hash('7800093758', 10);
   const admin = await prisma.user.create({
     data: {
-      name: 'Temple Administrator',
-      email: 'admin@iskcon.org',
-      passwordHash,
+      name: 'Super Admin (Aman Verma)',
+      email: 'av580731@gmail.com',
+      passwordHash: adminPasswordHash,
       role: 'ADMIN',
       cardType: 'BRAHMACHARI_S1',
-      phone: '+91 9876543210',
+      phone: '7800093758',
     },
   });
 
