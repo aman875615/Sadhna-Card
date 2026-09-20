@@ -14,15 +14,16 @@ async function main() {
   const passwordHash = await bcrypt.hash('password123', 10);
 
   // 1. Admin
-  const adminPasswordHash = await bcrypt.hash('7800093758', 10);
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@iskcon.org').toLowerCase().trim();
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
   const admin = await prisma.user.create({
     data: {
-      name: 'Super Admin (Aman Verma)',
-      email: 'av580731@gmail.com',
+      name: 'Super Admin',
+      email: adminEmail,
       passwordHash: adminPasswordHash,
       role: 'ADMIN',
       cardType: 'BRAHMACHARI_S1',
-      phone: '7800093758',
     },
   });
 

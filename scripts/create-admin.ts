@@ -4,8 +4,8 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = 'av580731@gmail.com';
-  const rawPassword = '7800093758';
+  const email = (process.env.ADMIN_EMAIL || 'admin@iskcon.org').toLowerCase().trim();
+  const rawPassword = process.env.ADMIN_PASSWORD || 'admin123';
   const passwordHash = await bcrypt.hash(rawPassword, 10);
 
   const adminUser = await prisma.user.upsert({
@@ -13,25 +13,21 @@ async function main() {
     update: {
       passwordHash,
       role: 'ADMIN',
-      name: 'Super Admin (Aman Verma)',
+      name: 'Super Admin',
       cardType: 'BRAHMACHARI_S1',
-      phone: '7800093758',
     },
     create: {
-      name: 'Super Admin (Aman Verma)',
+      name: 'Super Admin',
       email,
       passwordHash,
       role: 'ADMIN',
       cardType: 'BRAHMACHARI_S1',
-      phone: '7800093758',
     },
   });
 
-  console.log('✅ Admin account created/updated successfully in MongoDB:');
-  console.log(`- Name: ${adminUser.name}`);
+  console.log('✅ Admin account configured successfully in database:');
   console.log(`- Email: ${adminUser.email}`);
   console.log(`- Role: ${adminUser.role}`);
-  console.log(`- ID: ${adminUser.id}`);
 }
 
 main()
