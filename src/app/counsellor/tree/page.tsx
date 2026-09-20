@@ -79,6 +79,8 @@ export default function CounsellorTreePage() {
       }
       if (data.currentUser) {
         setCurrentUser(data.currentUser);
+      } else {
+        window.location.href = '/login';
       }
     } catch (e) {
       console.error(e);

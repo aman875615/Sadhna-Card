@@ -39,35 +39,24 @@ export async function getSessionUser() {
     const cookieStore = await cookies();
     const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
     
-    if (token) {
-      const payload = verifyToken(token);
-      if (payload) {
-        const user = await prisma.user.findUnique({
-          where: { id: payload.userId },
-          include: {
-            counsellor: { select: { id: true, name: true, email: true } },
-            preacher: { select: { id: true, name: true, email: true } },
-          },
-        });
-        if (user) return user;
-      }
+    if (!token) {
+      return null;
     }
 
-    // Default seamless fallback user (Counsellor HG ABC Prabhu or Admin)
-    const defaultUser = await prisma.user.findFirst({
-      where: { role: 'COUNSELLOR' },
-      include: {
-        counsellor: { select: { id: true, name: true, email: true } },
-        preacher: { select: { id: true, name: true, email: true } },
-      },
-    }) || await prisma.user.findFirst({
+    const payload = verifyToken(token);
+    if (!payload) {
+      return null;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
       include: {
         counsellor: { select: { id: true, name: true, email: true } },
         preacher: { select: { id: true, name: true, email: true } },
       },
     });
 
-    return defaultUser;
+    return user;
   } catch (err) {
     console.error('Error fetching session user:', err);
     return null;

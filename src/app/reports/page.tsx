@@ -60,9 +60,8 @@ function ReportContent() {
         if (targetId) {
           setSelectedUserId(targetId);
         }
-      } else if (data.allUsers && data.allUsers.length > 0) {
-        setAllUsers(data.allUsers);
-        setSelectedUserId(userIdParam || data.allUsers[0].id);
+      } else {
+        window.location.href = '/login';
       }
     } catch (e) {
       console.error(e);

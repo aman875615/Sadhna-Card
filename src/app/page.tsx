@@ -50,6 +50,8 @@ export default function HomePage() {
           const treeData = await treeRes.json();
           setMyStudents(treeData.students || []);
         }
+      } else {
+        window.location.href = '/login';
       }
     } catch (e) {
       console.error(e);
