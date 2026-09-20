@@ -35,9 +35,12 @@ export default function RootLayout({
     <html lang="en" className={`${outfit.variable} h-full`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="SadhanaCard" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Sadhana" />
+        <meta name="application-name" content="Sadhana" />
+        <meta name="theme-color" content="#ea580c" />
       </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 font-sans antialiased">
         <Navbar />
