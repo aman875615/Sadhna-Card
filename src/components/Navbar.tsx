@@ -142,15 +142,17 @@ export function Navbar() {
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 flex items-center justify-center text-white font-bold shadow-md group-hover:scale-105 transition-transform">
-                <Sparkles className="w-5 h-5" />
-              </div>
+              <img
+                src="/logo.png"
+                alt="SadhanaSync"
+                className="w-10 h-10 rounded-xl shadow-md group-hover:scale-105 transition-transform object-cover"
+              />
               <div>
                 <span className="font-bold text-lg text-slate-900 tracking-tight block leading-tight">
-                  ISKCON Sadhana
+                  SadhanaSync
                 </span>
                 <span className="text-[11px] font-medium text-amber-600 tracking-wider uppercase block">
-                  Time-Based Card & Reports
+                  Discipline &bull; Learning &bull; Devotion
                 </span>
               </div>
             </Link>

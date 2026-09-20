@@ -79,14 +79,16 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-500 text-white font-bold flex items-center justify-center mx-auto shadow-md">
-            <Sparkles className="w-6 h-6" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="SadhanaSync"
+            className="w-16 h-16 rounded-2xl mx-auto shadow-lg object-cover"
+          />
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Sign In to Sadhana Portal
+            Sign In to SadhanaSync
           </h1>
           <p className="text-xs text-slate-500">
-            Sign in to record your daily Sadhana and view reports
+            Discipline &bull; Learning &bull; Devotional Record
           </p>
         </div>
 
