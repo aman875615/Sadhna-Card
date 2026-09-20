@@ -14,7 +14,8 @@ import {
   Download,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  GraduationCap
 } from 'lucide-react';
 
 interface AuthUser {
@@ -122,8 +123,9 @@ export function Navbar() {
     ];
   } else if (currentUser?.role === 'COUNSELLOR') {
     navLinks = [
+      { href: '/', label: 'Counsellor Portal', icon: GraduationCap },
       { href: '/counsellor/tree', label: 'Hierarchy Tree', icon: Network },
-      { href: currentUser ? `/reports?userId=${currentUser.id}&from=2026-09-01&to=2026-09-15` : '/reports', label: 'Sadhana Reports', icon: Calendar },
+      { href: '/reports', label: 'Sadhana Reports', icon: Calendar },
     ];
   } else if (currentUser?.role === 'ADMIN') {
     navLinks = [
