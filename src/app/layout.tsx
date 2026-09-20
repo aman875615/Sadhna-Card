@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Outfit } from 'next/font/google';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
+import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -44,6 +45,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 font-sans antialiased">
         <Navbar />
+        <PwaInstallPrompt />
         <main className="flex-1 pb-16">{children}</main>
         <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 no-print">
           <p className="font-semibold text-slate-700">
