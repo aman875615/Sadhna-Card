@@ -1,0 +1,91 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("STUDENT") // ADMIN, COUNSELLOR, BRAHMACHARI, STUDENT
+  cardType     String   @default("STUDENT_S2") // BRAHMACHARI_S1, STUDENT_S2
+  phone        String?
+  avatarUrl    String?
+
+  // Hierarchy relationships:
+  counsellorId String?  @db.ObjectId
+  counsellor   User?    @relation("CounsellorBrahmacharis", fields: [counsellorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  brahmacharis User[]   @relation("CounsellorBrahmacharis")
+
+  preacherId   String?  @db.ObjectId
+  preacher     User?    @relation("PreacherStudents", fields: [preacherId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students     User[]   @relation("PreacherStudents")
+
+  sadhanaEntries SadhanaEntry[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model SadhanaEntry {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String   @db.ObjectId
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date               String   // YYYY-MM-DD format (timezone normalized)
+  
+  // Raw Nidra Inputs
+  sleepBedTime       String?  // e.g., "22:05" (24-hr format HH:mm)
+  wakeUpTime         String?  // e.g., "03:45" (24-hr format HH:mm)
+  daySleepMinutes    Int?     @default(0)
+
+  // Raw Japa Input
+  japaCompletionTime String?  // e.g., "07:10" (24-hr format HH:mm)
+  japaRoundsCount    Int?     @default(16)
+
+  // Raw Attendance Inputs ("ON_TIME", "LATE", "ABSENT", "SEVA_EXCUSED")
+  mangalAarti        String?  // ON_TIME, LATE, ABSENT, SEVA_EXCUSED
+  guruPuja           String?  // ON_TIME, LATE, ABSENT, SEVA_EXCUSED (for S1)
+  sbClass            String?  // ON_TIME, LATE, ABSENT, SEVA_EXCUSED
+  prasadam           String?  // ON_TIME, LATE, ABSENT, SEVA_EXCUSED
+
+  // Raw Duration Inputs (in minutes)
+  pathanMinutes      Int?     @default(0)
+  pathanBookName     String?
+  sravanMinutes      Int?     @default(0)
+  sravanLectureTopic String?
+
+  // Raw Office Input (BACE students)
+  officeOutTime      String?  // e.g. "09:00"
+  officeInTime       String?  // e.g. "18:30"
+
+  // Raw Seva Breakdown (minutes)
+  sevaPreaching      Int?     @default(0)
+  sevaManagement     Int?     @default(0)
+  sevaLecturePrep    Int?     @default(0)
+  sevaMenial         Int?     @default(0)
+  sevaHarinamBook    Int?     @default(0)
+  sevaAdhocTravel    Int?     @default(0)
+  sevaMisc           Int?     @default(0)
+  sevaNotes          String?
+
+  // Seva Bhavana (JSON string array of selected codes)
+  bhavanaNegativeTags String? // e.g. '["E", "M"]'
+  bhavanaPositiveTags String? // e.g. '["NTU", "D"]'
+  personalNotes       String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([userId, date])
+}
+
+model RuleConfig {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  key         String   @unique
+  value       String   // JSON containing scoring thresholds, targets, weights
+  updatedAt   DateTime @updatedAt
+}
