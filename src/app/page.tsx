@@ -227,11 +227,22 @@ export default function HomePage() {
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalTarget({ id: b.id, name: b.name, role: b.role || 'BRAHMACHARI' });
+                      setIsModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <Shield className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Customize Rules</span>
+                  </button>
                   <Link
                     href={`/reports?userId=${b.id}&from=${defaultInterval.from}&to=${defaultInterval.to}`}
                     className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center gap-1"
                   >
-                    <span>Inspect Sadhana Report</span>
+                    <span>Inspect Report</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </Link>
                 </div>
@@ -275,11 +286,22 @@ export default function HomePage() {
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalTarget({ id: s.id, name: s.name, role: s.role || 'STUDENT' });
+                      setIsModalOpen(true);
+                    }}
+                    className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <Shield className="w-3 h-3 text-amber-700" />
+                    <span>Rules</span>
+                  </button>
                   <Link
                     href={`/reports?userId=${s.id}&from=${defaultInterval.from}&to=${defaultInterval.to}`}
                     className="px-3 py-1 bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-900 border border-slate-200 hover:border-blue-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1"
                   >
-                    <span>View Student Report</span>
+                    <span>Report</span>
                     <ExternalLink className="w-3 h-3 text-blue-600" />
                   </Link>
                 </div>
@@ -287,6 +309,18 @@ export default function HomePage() {
             ))}
           </div>
         </div>
+
+        {/* Rules Customization Modal for Counsellor */}
+        {modalTarget && (
+          <SadhanaRulesModal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setModalTarget(null);
+            }}
+            targetUser={modalTarget}
+          />
+        )}
       </div>
     );
   }
