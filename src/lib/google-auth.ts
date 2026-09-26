@@ -1,8 +1,17 @@
 import { prisma } from './prisma';
 import { hashPassword } from './auth';
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+function getGoogleClientId(): string {
+  return (
+    process.env.GOOGLE_CLIENT_ID ||
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+    ''
+  ).trim();
+}
+
+function getGoogleClientSecret(): string {
+  return (process.env.GOOGLE_CLIENT_SECRET || '').trim();
+}
 
 export interface GoogleUserInfo {
   sub: string;
@@ -14,8 +23,9 @@ export interface GoogleUserInfo {
 
 export function getGoogleAuthUrl(origin: string, state?: string): string {
   const redirectUri = `${origin}/api/auth/google/callback`;
+  const clientId = getGoogleClientId();
   const params = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID,
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'openid email profile',
@@ -39,8 +49,8 @@ export async function exchangeCodeForTokens(code: string, origin: string) {
     },
     body: new URLSearchParams({
       code,
-      client_id: GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
+      client_id: getGoogleClientId(),
+      client_secret: getGoogleClientSecret(),
       redirect_uri: redirectUri,
       grant_type: 'authorization_code',
     }),
@@ -80,7 +90,7 @@ export async function verifyGoogleIdToken(idToken: string): Promise<GoogleUserIn
   }
 
   const payload = await response.json();
-  if (payload.aud !== GOOGLE_CLIENT_ID) {
+  if (payload.aud !== getGoogleClientId()) {
     throw new Error('Google Token Audience mismatch');
   }
 
