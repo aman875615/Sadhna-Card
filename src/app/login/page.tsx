@@ -6,6 +6,7 @@ import Image from 'next/image';
 import logoImg from '@/assets/logo.png';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Lock, Mail, UserPlus, ChevronRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,6 +19,15 @@ export default function LoginPage() {
 
   useEffect(() => {
     fetchUsers();
+
+    // Check for error query params from Google callback redirect
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get('error');
+      if (err) {
+        setError(err);
+      }
+    }
   }, []);
 
   const fetchUsers = async () => {
@@ -105,7 +115,20 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Form */}
+        {/* Google Authentication Button */}
+        <div className="space-y-3">
+          <GoogleSignInButton text="Sign In with Google" />
+          
+          <div className="relative flex items-center justify-center">
+            <div className="border-t border-slate-200 w-full" />
+            <span className="bg-white px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">
+              or sign in with email
+            </span>
+            <div className="border-t border-slate-200 w-full" />
+          </div>
+        </div>
+
+        {/* Email/Password Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
@@ -147,7 +170,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 px-4 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="w-full py-3 px-4 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
             <ChevronRight className="w-4 h-4" />
@@ -178,7 +201,7 @@ export default function LoginPage() {
                   type="button"
                   key={u.id}
                   onClick={() => handleQuickLogin(u)}
-                  className="w-full py-2 px-3 bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 rounded-xl text-xs font-medium transition-colors flex items-center justify-between"
+                  className="w-full py-2 px-3 bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 rounded-xl text-xs font-medium transition-colors flex items-center justify-between cursor-pointer"
                 >
                   <div className="text-left truncate pr-2">
                     <span className="font-bold text-slate-800 block truncate">{u.name}</span>

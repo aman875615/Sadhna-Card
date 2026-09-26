@@ -12,6 +12,8 @@ const PUBLIC_PATHS = [
   '/api/auth/signup',
   '/api/auth/logout',
   '/api/auth/hierarchy-options',
+  '/api/auth/google/init',
+  '/api/auth/google/callback',
   '/manifest.json',
   '/manifest.webmanifest',
   '/sw.js',
