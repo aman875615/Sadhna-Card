@@ -17,11 +17,13 @@ import {
   ExternalLink,
   User,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Shield
 } from 'lucide-react';
 import { StudentSadhanaForm } from '@/components/StudentSadhanaForm';
 import { BrahmachariSadhanaForm } from '@/components/BrahmachariSadhanaForm';
 import { MyEffectiveRulesCard } from '@/components/MyEffectiveRulesCard';
+import { SadhanaRulesModal } from '@/components/SadhanaRulesModal';
 
 export default function HomePage() {
   const router = useRouter();
@@ -36,6 +38,9 @@ export default function HomePage() {
   }>({ brahmacharis: [], students: [] });
   const [myStudents, setMyStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [modalTarget, setModalTarget] = useState<{ id: string; name: string; role: string } | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const defaultInterval = {
     from: '2026-09-01',
@@ -396,7 +401,7 @@ export default function HomePage() {
 
       {/* Brahmachari specific: My Students summary widget */}
       {isBrahmachari && myStudents.length > 0 && (
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-orange-600" />
             <span className="text-xs font-bold text-slate-800">
@@ -405,14 +410,30 @@ export default function HomePage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {myStudents.map((s) => (
-              <Link
+              <div
                 key={s.id}
-                href={`/reports?userId=${s.id}&from=${defaultInterval.from}&to=${defaultInterval.to}`}
-                className="px-3 py-1 bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-300 text-slate-700 hover:text-orange-900 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1 pr-2 shadow-2xs"
               >
-                <span>{s.name}</span>
-                <ExternalLink className="w-3 h-3 text-orange-600" />
-              </Link>
+                <Link
+                  href={`/reports?userId=${s.id}&from=${defaultInterval.from}&to=${defaultInterval.to}`}
+                  className="px-2 py-0.5 hover:bg-orange-50 text-slate-800 hover:text-orange-900 rounded-md text-xs font-bold transition-colors flex items-center gap-1"
+                >
+                  <span>{s.name}</span>
+                  <ExternalLink className="w-3 h-3 text-orange-600" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalTarget({ id: s.id, name: s.name, role: s.role || 'STUDENT' });
+                    setIsModalOpen(true);
+                  }}
+                  className="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  title="Customize Student Rules"
+                >
+                  <Shield className="w-3 h-3 text-amber-700" />
+                  <span>Customize Rules</span>
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -435,6 +456,18 @@ export default function HomePage() {
           currentUser={currentUser}
           initialEntry={initialEntry}
           onSaved={() => fetchMyEntry(selectedDate)}
+        />
+      )}
+
+      {/* Rules Customization Modal */}
+      {modalTarget && (
+        <SadhanaRulesModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setModalTarget(null);
+          }}
+          targetUser={modalTarget}
         />
       )}
     </div>
