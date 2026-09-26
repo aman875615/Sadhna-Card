@@ -61,6 +61,23 @@ export function BrahmachariSadhanaForm({
   });
 
   const [evaluatedScore, setEvaluatedScore] = useState<DailyScoredResult | null>(null);
+  const [effectiveRules, setEffectiveRules] = useState<any>(null);
+
+  useEffect(() => {
+    fetchEffectiveRules(selectedDate);
+  }, [selectedDate]);
+
+  const fetchEffectiveRules = async (dateStr: string) => {
+    try {
+      const res = await fetch(`/api/sadhana-rules/my?date=${dateStr}`);
+      const data = await res.json();
+      if (data.effectiveRules) {
+        setEffectiveRules(data.effectiveRules);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     if (initialEntry) {
@@ -110,10 +127,11 @@ export function BrahmachariSadhanaForm({
         bhavanaPositiveTags: JSON.stringify(formData.bhavanaPositiveTags),
       },
       'BRAHMACHARI_S1',
-      selectedDate
+      selectedDate,
+      effectiveRules || undefined
     );
     setEvaluatedScore(evalRes);
-  }, [formData, selectedDate]);
+  }, [formData, selectedDate, effectiveRules]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,6 +212,13 @@ export function BrahmachariSadhanaForm({
   const targetDailySravan = Math.round(cfg.weeklySravanMinutes / 7); // 60 min
   const targetDailySeva = Math.round(cfg.weeklySevaMinutes / 7); // 360 min
 
+  const effectiveWakeUp = effectiveRules?.wakeUpTime || '03:45';
+  const isWakeUpCustom = Boolean(effectiveRules?.activeOverrides?.['WAKEUP_TIME_S1']);
+  const effectiveBedTime = effectiveRules?.bedTime || '22:00';
+  const isBedCustom = Boolean(effectiveRules?.activeOverrides?.['BED_TIME_S1']);
+  const effectiveDaySleepLimit = effectiveRules?.daySleepLimit ?? 60;
+  const isDaySleepCustom = Boolean(effectiveRules?.activeOverrides?.['DAY_SLEEP_LIMIT_S1']);
+
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       <div className="lg:col-span-8 space-y-6">
@@ -244,7 +269,7 @@ export function BrahmachariSadhanaForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <TimeInput
-              label="To Bed Time (Nidra)"
+              label={`To Bed Time (Nidra)${isBedCustom ? ' ⭐ Custom Rule' : ''}`}
               value={formData.sleepBedTime}
               onChange={(val) => setFormData((prev) => ({ ...prev, sleepBedTime: val }))}
               quickPresets={[
@@ -253,7 +278,7 @@ export function BrahmachariSadhanaForm({
                 { label: '10:05 PM', time: '22:05' },
                 { label: '10:15 PM', time: '22:15' },
               ]}
-              helperText="<= 10:00 PM (25 pts), reduce 5 pts every 5 min"
+              helperText={`<= ${effectiveBedTime} (25 pts), reduce 5 pts every 5 min${isBedCustom ? ' [Counsellor Override Active]' : ''}`}
               badgeScore={
                 evaluatedScore
                   ? { marks: evaluatedScore.scores.bedTime.marks, maxMarks: 25 }
@@ -262,16 +287,16 @@ export function BrahmachariSadhanaForm({
             />
 
             <TimeInput
-              label="Wake Up Time (Nidra)"
+              label={`Wake Up Time (Nidra)${isWakeUpCustom ? ' ⭐ Custom Rule' : ''}`}
               value={formData.wakeUpTime}
               onChange={(val) => setFormData((prev) => ({ ...prev, wakeUpTime: val }))}
               quickPresets={[
+                { label: `${effectiveWakeUp}`, time: effectiveWakeUp },
                 { label: '3:30 AM', time: '03:30' },
                 { label: '3:45 AM', time: '03:45' },
-                { label: '3:55 AM', time: '03:55' },
-                { label: '4:05 AM', time: '04:05' },
+                { label: '4:00 AM', time: '04:00' },
               ]}
-              helperText="<= 3:45 AM (25 pts), reduce 5 pts every 5 min"
+              helperText={`<= ${effectiveWakeUp} (25 pts), reduce 5 pts every 5 min${isWakeUpCustom ? ' [Counsellor Override Active]' : ''}`}
               badgeScore={
                 evaluatedScore
                   ? { marks: evaluatedScore.scores.wakeUp.marks, maxMarks: 25 }
@@ -280,10 +305,10 @@ export function BrahmachariSadhanaForm({
             />
 
             <DurationInput
-              label="Day Sleep Duration"
+              label={`Day Sleep Duration${isDaySleepCustom ? ' ⭐ Custom Rule' : ''}`}
               totalMinutes={formData.daySleepMinutes}
               onChange={(mins) => setFormData((prev) => ({ ...prev, daySleepMinutes: mins }))}
-              helperText="<= 60 min (25 pts). -1 pt per 2 min over 60 min"
+              helperText={`<= ${effectiveDaySleepLimit} min (25 pts). -1 pt per 2 min over ${effectiveDaySleepLimit} min`}
             />
 
             <TimeInput

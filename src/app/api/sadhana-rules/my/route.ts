@@ -2,18 +2,21 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { getEffectiveSadhanaRulesForDate } from '@/lib/rule-override-engine';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const sessionUser = await getSessionUser();
     if (!sessionUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const { searchParams } = new URL(req.url);
+    const dateParam = searchParams.get('date');
+    const targetDate = dateParam || new Date().toISOString().split('T')[0];
+
     const effectiveRules = await getEffectiveSadhanaRulesForDate(
       sessionUser.id,
       sessionUser.role,
-      today
+      targetDate
     );
 
     return NextResponse.json({
@@ -26,7 +29,7 @@ export async function GET() {
         preacher: sessionUser.preacher,
       },
       effectiveRules,
-      date: today,
+      date: targetDate,
     });
   } catch (err: any) {
     console.error('Error fetching my sadhana rules:', err);

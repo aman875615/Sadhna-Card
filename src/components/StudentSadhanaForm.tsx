@@ -60,6 +60,23 @@ export function StudentSadhanaForm({
   });
 
   const [evaluatedScore, setEvaluatedScore] = useState<DailyScoredResult | null>(null);
+  const [effectiveRules, setEffectiveRules] = useState<any>(null);
+
+  useEffect(() => {
+    fetchEffectiveRules(selectedDate);
+  }, [selectedDate]);
+
+  const fetchEffectiveRules = async (dateStr: string) => {
+    try {
+      const res = await fetch(`/api/sadhana-rules/my?date=${dateStr}`);
+      const data = await res.json();
+      if (data.effectiveRules) {
+        setEffectiveRules(data.effectiveRules);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     if (initialEntry) {
@@ -107,10 +124,11 @@ export function StudentSadhanaForm({
         bhavanaPositiveTags: JSON.stringify(formData.bhavanaPositiveTags),
       },
       'STUDENT_S2',
-      selectedDate
+      selectedDate,
+      effectiveRules || undefined
     );
     setEvaluatedScore(evalRes);
-  }, [formData, selectedDate]);
+  }, [formData, selectedDate, effectiveRules]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,6 +209,13 @@ export function StudentSadhanaForm({
   const targetDailySravan = Math.round(cfg.weeklySravanMinutes / 7); // 30 min
   const targetDailySeva = Math.round(cfg.weeklySevaMinutes / 7); // 51 min
 
+  const effectiveWakeUp = effectiveRules?.wakeUpTime || '04:30';
+  const isWakeUpCustom = Boolean(effectiveRules?.activeOverrides?.['WAKEUP_TIME_S2'] || effectiveRules?.activeOverrides?.['WAKEUP_TIME_S1']);
+  const effectiveBedTime = effectiveRules?.bedTime || '22:00';
+  const isBedCustom = Boolean(effectiveRules?.activeOverrides?.['BED_TIME_S2'] || effectiveRules?.activeOverrides?.['BED_TIME_S1']);
+  const effectiveDaySleepLimit = effectiveRules?.daySleepLimit ?? 60;
+  const isDaySleepCustom = Boolean(effectiveRules?.activeOverrides?.['DAY_SLEEP_LIMIT_S2'] || effectiveRules?.activeOverrides?.['DAY_SLEEP_LIMIT_S1']);
+
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* Form Content (8 cols) */}
@@ -245,7 +270,7 @@ export function StudentSadhanaForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <TimeInput
-              label="Bed Time (To Bed)"
+              label={`Bed Time (To Bed)${isBedCustom ? ' ⭐ Custom Rule' : ''}`}
               value={formData.sleepBedTime}
               onChange={(val) => setFormData((prev) => ({ ...prev, sleepBedTime: val }))}
               quickPresets={[
@@ -254,7 +279,7 @@ export function StudentSadhanaForm({
                 { label: '10:05 PM', time: '22:05' },
                 { label: '10:15 PM', time: '22:15' },
               ]}
-              helperText="<= 10:00 PM (25 pts), reduce 5 pts every 5 min"
+              helperText={`<= ${effectiveBedTime} (25 pts), reduce 5 pts every 5 min${isBedCustom ? ' [Preacher Override Active]' : ''}`}
               badgeScore={
                 evaluatedScore
                   ? { marks: evaluatedScore.scores.bedTime.marks, maxMarks: 25 }
@@ -263,16 +288,16 @@ export function StudentSadhanaForm({
             />
 
             <TimeInput
-              label="Wake Up Time"
+              label={`Wake Up Time${isWakeUpCustom ? ' ⭐ Custom Rule' : ''}`}
               value={formData.wakeUpTime}
               onChange={(val) => setFormData((prev) => ({ ...prev, wakeUpTime: val }))}
               quickPresets={[
-                { label: '3:45 AM', time: '03:45' },
+                { label: `${effectiveWakeUp}`, time: effectiveWakeUp },
                 { label: '4:00 AM', time: '04:00' },
                 { label: '4:30 AM', time: '04:30' },
-                { label: '4:45 AM', time: '04:45' },
+                { label: '5:00 AM', time: '05:00' },
               ]}
-              helperText="<= 3:45 AM (25 pts), reduce 5 pts every 5 min"
+              helperText={`<= ${effectiveWakeUp} (25 pts), reduce 5 pts every 5 min${isWakeUpCustom ? ' [Preacher Override Active]' : ''}`}
               badgeScore={
                 evaluatedScore
                   ? { marks: evaluatedScore.scores.wakeUp.marks, maxMarks: 25 }
@@ -281,10 +306,10 @@ export function StudentSadhanaForm({
             />
 
             <DurationInput
-              label="Day Sleep Duration"
+              label={`Day Sleep Duration${isDaySleepCustom ? ' ⭐ Custom Rule' : ''}`}
               totalMinutes={formData.daySleepMinutes}
               onChange={(mins) => setFormData((prev) => ({ ...prev, daySleepMinutes: mins }))}
-              helperText="<= 60 min (25 pts). -1 pt per 2 min over 60 min"
+              helperText={`<= ${effectiveDaySleepLimit} min (25 pts). -1 pt per 2 min over ${effectiveDaySleepLimit} min`}
             />
 
             <TimeInput
