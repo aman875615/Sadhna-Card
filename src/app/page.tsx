@@ -313,12 +313,14 @@ export default function HomePage() {
         {/* Rules Customization Modal for Counsellor */}
         {modalTarget && (
           <SadhanaRulesModal
+            targetUserId={modalTarget.id}
+            targetUserName={modalTarget.name}
+            targetUserRole={modalTarget.role}
             isOpen={isModalOpen}
             onClose={() => {
               setIsModalOpen(false);
               setModalTarget(null);
             }}
-            targetUser={modalTarget}
           />
         )}
       </div>
@@ -496,12 +498,14 @@ export default function HomePage() {
       {/* Rules Customization Modal */}
       {modalTarget && (
         <SadhanaRulesModal
+          targetUserId={modalTarget.id}
+          targetUserName={modalTarget.name}
+          targetUserRole={modalTarget.role}
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false);
             setModalTarget(null);
           }}
-          targetUser={modalTarget}
         />
       )}
     </div>
