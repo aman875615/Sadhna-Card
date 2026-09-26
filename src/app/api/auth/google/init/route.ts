@@ -25,10 +25,14 @@ export async function GET(req: Request) {
     const stateStr = Buffer.from(JSON.stringify(stateObj)).toString('base64url');
     const origin = getOrigin(req);
     const googleUrl = getGoogleAuthUrl(origin, stateStr);
-
     return NextResponse.redirect(googleUrl);
   } catch (err: any) {
     console.error('Google init error:', err);
-    return NextResponse.json({ error: 'Failed to initiate Google sign in' }, { status: 500 });
+    const origin = getOrigin(req);
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(
+        err.message || 'Failed to initiate Google sign in. Please check environment configuration.'
+      )}`
+    );
   }
 }

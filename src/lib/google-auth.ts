@@ -22,8 +22,11 @@ export interface GoogleUserInfo {
 }
 
 export function getGoogleAuthUrl(origin: string, state?: string): string {
-  const redirectUri = `${origin}/api/auth/google/callback`;
   const clientId = getGoogleClientId();
+  if (!clientId) {
+    throw new Error('GOOGLE_CLIENT_ID is not configured in Environment Variables');
+  }
+  const redirectUri = `${origin}/api/auth/google/callback`;
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
