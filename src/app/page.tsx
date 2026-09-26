@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { StudentSadhanaForm } from '@/components/StudentSadhanaForm';
 import { BrahmachariSadhanaForm } from '@/components/BrahmachariSadhanaForm';
+import { MyEffectiveRulesCard } from '@/components/MyEffectiveRulesCard';
 
 export default function HomePage() {
   const router = useRouter();
@@ -416,6 +417,9 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Effective Rules & Active Custom Overrides Card */}
+      <MyEffectiveRulesCard />
 
       {/* Role-Specific Form Container */}
       {isBrahmachari ? (

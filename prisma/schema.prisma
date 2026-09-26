@@ -27,6 +27,10 @@ model User {
   students     User[]   @relation("PreacherStudents")
 
   sadhanaEntries SadhanaEntry[]
+  targetOverrides SadhanaRuleOverride[] @relation("TargetUserOverrides")
+  createdOverrides SadhanaRuleOverride[] @relation("CreatedOverrides")
+  auditLogsReceived SadhanaRuleAuditLog[] @relation("AuditTargetUser")
+  auditLogsPerformed SadhanaRuleAuditLog[] @relation("AuditPerformedBy")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -86,6 +90,49 @@ model SadhanaEntry {
 model RuleConfig {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   key         String   @unique
-  value       String   // JSON containing scoring thresholds, targets, weights
+  value       String   // JSON containing scoring thresholds, targets, weights, override limits
   updatedAt   DateTime @updatedAt
+}
+
+model SadhanaRuleOverride {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  ruleKey          String   // BED_TIME, WAKE_UP_TIME, DAY_SLEEP_LIMIT, JAPA_TARGET_TIME, PATHAN_WEEKLY_HOURS, SRAVAN_WEEKLY_HOURS, SEVA_WEEKLY_HOURS
+  targetUserId     String   @db.ObjectId
+  targetUser       User     @relation("TargetUserOverrides", fields: [targetUserId], references: [id], onDelete: Cascade)
+  targetRole       String   // STUDENT, BRAHMACHARI
+  createdById      String   @db.ObjectId
+  createdBy        User     @relation("CreatedOverrides", fields: [createdById], references: [id], onDelete: Cascade)
+  createdByRole    String   // COUNSELLOR, BRAHMACHARI, ADMIN
+  originalValue    String   // e.g. "22:00" or "3.5"
+  overrideValue    String   // e.g. "22:15" or "4.0"
+  allowedDeviation String?  // e.g. "+/- 15 mins"
+  reason           String   // Mandatory reason for override
+  effectiveFrom    String   // YYYY-MM-DD
+  effectiveUntil   String?  // YYYY-MM-DD (null = open-ended)
+  status           String   @default("ACTIVE") // ACTIVE, EXPIRED, REVOKED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([targetUserId, status])
+  @@index([targetUserId, ruleKey, status])
+}
+
+model SadhanaRuleAuditLog {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  action         String   // SADHANA_RULE_OVERRIDE_CREATED, SADHANA_RULE_OVERRIDE_UPDATED, SADHANA_RULE_OVERRIDE_REVOKED
+  performedById  String   @db.ObjectId
+  performedBy    User     @relation("AuditPerformedBy", fields: [performedById], references: [id], onDelete: Cascade)
+  targetUserId   String   @db.ObjectId
+  targetUser     User     @relation("AuditTargetUser", fields: [targetUserId], references: [id], onDelete: Cascade)
+  ruleKey        String
+  oldValue       String?
+  newValue       String?
+  reason         String?
+  effectiveFrom  String?
+  effectiveUntil String?
+  metadata       String?  // JSON string of additional details
+  createdAt      DateTime @default(now())
+
+  @@index([targetUserId])
+  @@index([performedById])
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { generatePeriodReport, CardType } from '@/lib/scoring-engine';
+import { getEffectiveSadhanaRulesForRange } from '@/lib/rule-override-engine';
 
 export async function GET(req: Request) {
   try {
@@ -28,6 +29,13 @@ export async function GET(req: Request) {
       orderBy: { date: 'asc' },
     });
 
+    const rulesByDateMap = await getEffectiveSadhanaRulesForRange(
+      userId,
+      sessionUser.role,
+      from,
+      to
+    );
+
     const report = generatePeriodReport(
       {
         id: sessionUser.id,
@@ -40,7 +48,8 @@ export async function GET(req: Request) {
       },
       from,
       to,
-      entries
+      entries,
+      rulesByDateMap
     );
 
     return NextResponse.json(report);

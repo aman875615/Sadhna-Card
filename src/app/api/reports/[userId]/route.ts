@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { generatePeriodReport, CardType } from '@/lib/scoring-engine';
+import { getEffectiveSadhanaRulesForRange } from '@/lib/rule-override-engine';
 
 export async function GET(
   req: Request,
@@ -41,7 +42,6 @@ export async function GET(
       sessionUser.role === 'BRAHMACHARI' &&
       (targetUser.preacherId === sessionUser.id || targetUser.id === sessionUser.id);
 
-    // Also if counsellor is looking at student whose preacher is under that counsellor:
     let isCounsellorOfPreacher = false;
     if (sessionUser.role === 'COUNSELLOR' && targetUser.preacherId) {
       const preacher = await prisma.user.findUnique({ where: { id: targetUser.preacherId } });
@@ -66,6 +66,14 @@ export async function GET(
       orderBy: { date: 'asc' },
     });
 
+    // Resolve date-specific effective rules across the requested date range
+    const rulesByDateMap = await getEffectiveSadhanaRulesForRange(
+      targetUserId,
+      targetUser.role,
+      from,
+      to
+    );
+
     const report = generatePeriodReport(
       {
         id: targetUser.id,
@@ -78,7 +86,8 @@ export async function GET(
       },
       from,
       to,
-      entries
+      entries,
+      rulesByDateMap
     );
 
     return NextResponse.json(report);

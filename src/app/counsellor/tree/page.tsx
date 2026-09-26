@@ -13,8 +13,10 @@ import {
   GraduationCap, 
   Search,
   ExternalLink,
+  Shield,
   ShieldAlert
 } from 'lucide-react';
+import { SadhanaRulesModal } from '@/components/SadhanaRulesModal';
 
 interface Student {
   id: string;
@@ -51,6 +53,10 @@ export default function CounsellorTreePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
+
+  // Modal State for Rule Customization
+  const [modalTarget, setModalTarget] = useState<{ id: string; name: string; role: string } | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Default interval for links
   const fromDate = '2026-09-01';
@@ -93,10 +99,9 @@ export default function CounsellorTreePage() {
     setExpandedNodes((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const matchesSearch = (name: string, email: string) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return name.toLowerCase().includes(q) || email.toLowerCase().includes(q);
+  const openRulesModal = (target: { id: string; name: string; role: string }) => {
+    setModalTarget(target);
+    setIsModalOpen(true);
   };
 
   return (
@@ -114,7 +119,7 @@ export default function CounsellorTreePage() {
             Counsellor & Preacher Tree
           </h1>
           <p className="text-slate-300 text-xs sm:text-sm max-w-2xl">
-            Navigate through Counsellors $\to$ Brahmacharis/Preachers $\to$ Students. View real-time Sadhana Cards & interval-aware reports.
+            Navigate through Counsellors &rarr; Brahmacharis/Preachers &rarr; Students. View real-time Sadhana Cards, customize personal rules, and view interval-aware reports.
           </p>
         </div>
 
@@ -176,7 +181,7 @@ export default function CounsellorTreePage() {
                     <button
                       type="button"
                       onClick={() => toggleNode(counsellor.id)}
-                      className="p-1.5 hover:bg-amber-200/50 rounded-lg text-amber-900 transition-colors"
+                      className="p-1.5 hover:bg-amber-200/50 rounded-lg text-amber-900 transition-colors cursor-pointer"
                     >
                       {isCounsellorExpanded ? (
                         <ChevronDown className="w-5 h-5" />
@@ -230,7 +235,7 @@ export default function CounsellorTreePage() {
                                 <button
                                   type="button"
                                   onClick={() => toggleNode(brahmachari.id)}
-                                  className="p-1 hover:bg-slate-200 rounded-md text-slate-700 transition-colors"
+                                  className="p-1 hover:bg-slate-200 rounded-md text-slate-700 transition-colors cursor-pointer"
                                 >
                                   {isBrahmachariExpanded ? (
                                     <ChevronDown className="w-4 h-4" />
@@ -255,6 +260,18 @@ export default function CounsellorTreePage() {
                               </div>
 
                               <div className="flex items-center gap-2">
+                                {/* Rule Override Button for Counsellor & Admin */}
+                                {(currentUser?.role === 'COUNSELLOR' || currentUser?.role === 'ADMIN') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openRulesModal(brahmachari)}
+                                    className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                                    <span>Customize Rules</span>
+                                  </button>
+                                )}
+
                                 <Link
                                   href={`/reports?userId=${brahmachari.id}&from=${fromDate}&to=${toDate}`}
                                   className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
@@ -294,6 +311,20 @@ export default function CounsellorTreePage() {
                                       </div>
 
                                       <div className="flex items-center gap-2">
+                                        {/* Rule Override Button for Preachers & Counsellors */}
+                                        {(currentUser?.role === 'BRAHMACHARI' ||
+                                          currentUser?.role === 'COUNSELLOR' ||
+                                          currentUser?.role === 'ADMIN') && (
+                                          <button
+                                            type="button"
+                                            onClick={() => openRulesModal(student)}
+                                            className="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                                          >
+                                            <Shield className="w-3 h-3 text-indigo-600" />
+                                            <span>Student Rules</span>
+                                          </button>
+                                        )}
+
                                         <Link
                                           href={`/reports?userId=${student.id}&from=${fromDate}&to=${toDate}`}
                                           className="px-3 py-1 bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-900 border border-slate-200 hover:border-blue-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 shadow-2xs"
@@ -318,6 +349,18 @@ export default function CounsellorTreePage() {
           })
         )}
       </div>
+
+      {/* Rules Customization Modal */}
+      {modalTarget && (
+        <SadhanaRulesModal
+          targetUserId={modalTarget.id}
+          targetUserName={modalTarget.name}
+          targetUserRole={modalTarget.role}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onRuleUpdated={fetchTree}
+        />
+      )}
     </div>
   );
 }

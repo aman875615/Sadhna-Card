@@ -5,7 +5,8 @@
  * 2. sadhana Card_bace.xls (S2)
  *
  * Source of Truth: Raw time and activity data.
- * All points and percentages are computed on the fly.
+ * All points and percentages are computed dynamically with full support for
+ * Hierarchical Sadhana Rule Overrides.
  */
 
 export type CardType = 'BRAHMACHARI_S1' | 'STUDENT_S2';
@@ -42,16 +43,36 @@ export interface RawSadhanaEntry {
   personalNotes?: string | null;
 }
 
+export interface EffectiveDayRules {
+  bedTime?: string;
+  wakeUpTime?: string;
+  daySleepLimit?: number;
+  japaTargetTime?: string;
+  weeklyPathanHours?: number;
+  weeklySravanHours?: number;
+  weeklySevaHours?: number;
+  activeOverrides?: Record<string, any>;
+}
+
 export interface DailyScoredResult {
   date: string;
   isSubmitted: boolean;
   raw: Partial<RawSadhanaEntry>;
+  effectiveRules?: EffectiveDayRules;
   scores: {
-    bedTime: { raw: string | null; marks: number; maxMarks: number };
-    wakeUp: { raw: string | null; marks: number; maxMarks: number };
-    daySleep: { rawMinutes: number; marks: number; maxMarks: number };
+    bedTime: { raw: string | null; target: string; marks: number; maxMarks: number; isOverridden?: boolean };
+    wakeUp: { raw: string | null; target: string; marks: number; maxMarks: number; isOverridden?: boolean };
+    daySleep: { rawMinutes: number; targetLimit: number; marks: number; maxMarks: number; isOverridden?: boolean };
     nidraTotal: { marks: number; maxMarks: number; percentage: number };
-    japa: { rawTime: string | null; rounds: number; marks: number; maxMarks: number; percentage: number };
+    japa: {
+      rawTime: string | null;
+      targetTime: string;
+      rounds: number;
+      marks: number;
+      maxMarks: number;
+      percentage: number;
+      isOverridden?: boolean;
+    };
     attendance: {
       mangalAarti: { status: string; marks: number; maxMarks: number };
       guruPuja?: { status: string; marks: number; maxMarks: number };
@@ -61,8 +82,8 @@ export interface DailyScoredResult {
       maxMarks: number;
       percentage: number;
     };
-    pathan: { actualMinutes: number; targetDailyMinutes: number; bookName?: string };
-    sravan: { actualMinutes: number; targetDailyMinutes: number; topic?: string };
+    pathan: { actualMinutes: number; targetDailyMinutes: number; bookName?: string; isOverridden?: boolean };
+    sravan: { actualMinutes: number; targetDailyMinutes: number; topic?: string; isOverridden?: boolean };
     seva: {
       totalMinutes: number;
       targetDailyMinutes: number;
@@ -76,6 +97,7 @@ export interface DailyScoredResult {
         misc: number;
       };
       notes?: string;
+      isOverridden?: boolean;
     };
     sevaBhavana: {
       negativeTags: string[];
@@ -98,6 +120,7 @@ export interface SectionReport {
   targetMinutes?: number;
   percentage: number;
   statusGrade?: string;
+  isOverridden?: boolean;
 }
 
 export interface PeriodReport {
@@ -118,6 +141,7 @@ export interface PeriodReport {
     missingDays: number;
     targetMode: 'PROPORTIONAL_TO_DAYS' | 'CALENDAR_WEEK';
   };
+  hasCustomOverrides: boolean;
   sections: {
     nidra: SectionReport;
     japa: SectionReport;
@@ -154,106 +178,86 @@ export function parseTimeToMinutes(timeStr?: string | null): number | null {
 }
 
 /**
- * 1. NIDRA - To Bed scoring
- * Thresholds (24h format):
- * <= 22:00 (10:00 PM) -> 25
- * <= 22:05 (10:05 PM) -> 20
- * <= 22:10 (10:10 PM) -> 15
- * <= 22:15 (10:15 PM) -> 10
- * <= 22:20 (10:20 PM) -> 5
- * <= 22:25 (10:25 PM) -> 0
- * <= 22:30 (10:30 PM) -> -5
- * > 22:30 -> -5
+ * 1. NIDRA - Bed Time scoring with dynamic target threshold.
+ * Default target: 22:00 (10:00 PM)
  */
-export function scoreBedTime(timeStr?: string | null): number {
+export function scoreBedTime(timeStr?: string | null, targetBedTime: string = '22:00'): number {
   const min = parseTimeToMinutes(timeStr);
   if (min === null) return 0;
 
-  // If devotee slept earlier in the evening, e.g. 21:00 (9 PM) -> 25 marks
-  // If devotee slept before 12:00 noon next day (meaning late night 23:00 or 01:00 AM)
   let normalizedMin = min;
   if (min < 12 * 60) {
-    // E.g. 00:30 AM is 24*60 + 30 = 1470 minutes
     normalizedMin = min + 24 * 60;
   }
 
-  const t10pm = 22 * 60; // 1320
-  if (normalizedMin <= t10pm) return 25;
-  if (normalizedMin <= t10pm + 5) return 20;
-  if (normalizedMin <= t10pm + 10) return 15;
-  if (normalizedMin <= t10pm + 15) return 10;
-  if (normalizedMin <= t10pm + 20) return 5;
-  if (normalizedMin <= t10pm + 25) return 0;
+  const baseTargetMin = parseTimeToMinutes(targetBedTime) || 22 * 60;
+  const normalizedTarget = baseTargetMin < 12 * 60 ? baseTargetMin + 24 * 60 : baseTargetMin;
+
+  if (normalizedMin <= normalizedTarget) return 25;
+  if (normalizedMin <= normalizedTarget + 5) return 20;
+  if (normalizedMin <= normalizedTarget + 10) return 15;
+  if (normalizedMin <= normalizedTarget + 15) return 10;
+  if (normalizedMin <= normalizedTarget + 20) return 5;
+  if (normalizedMin <= normalizedTarget + 25) return 0;
   return -5;
 }
 
 /**
- * 2. NIDRA - Wake Up scoring
- * Thresholds:
- * <= 03:45 AM -> 25
- * <= 03:50 AM -> 20
- * <= 03:55 AM -> 15
- * <= 04:00 AM -> 10
- * <= 04:05 AM -> 5
- * <= 04:10 AM -> 0
- * <= 04:15 AM -> -5
- * > 04:15 AM -> -5
+ * 2. NIDRA - Wake Up scoring with dynamic target threshold.
+ * Default target: 03:45 AM (Ashram) / 04:30 AM (BACE)
  */
-export function scoreWakeUpTime(timeStr?: string | null): number {
+export function scoreWakeUpTime(timeStr?: string | null, targetWakeUpTime: string = '03:45'): number {
   const min = parseTimeToMinutes(timeStr);
   if (min === null) return 0;
 
-  const t345 = 3 * 60 + 45; // 225
-  if (min <= t345) return 25;
-  if (min <= 3 * 60 + 50) return 20;
-  if (min <= 3 * 60 + 55) return 15;
-  if (min <= 4 * 60 + 0) return 10;
-  if (min <= 4 * 60 + 5) return 5;
-  if (min <= 4 * 60 + 10) return 0;
+  const targetMin = parseTimeToMinutes(targetWakeUpTime) || (3 * 60 + 45);
+
+  if (min <= targetMin) return 25;
+  if (min <= targetMin + 5) return 20;
+  if (min <= targetMin + 10) return 15;
+  if (min <= targetMin + 15) return 10;
+  if (min <= targetMin + 20) return 5;
+  if (min <= targetMin + 25) return 0;
   return -5;
 }
 
 /**
- * 3. NIDRA - Day Sleep scoring
- * Rule: 60 min or less = 25 marks.
- * For every minute beyond 60 min reduce 1 mark / 2 min from 25.
+ * 3. NIDRA - Day Sleep scoring with dynamic minute limit.
+ * Default target limit: 60 minutes.
  */
-export function scoreDaySleep(actualMinutes?: number | null): number {
+export function scoreDaySleep(actualMinutes?: number | null, targetLimitMinutes: number = 60): number {
   const minutes = actualMinutes || 0;
-  if (minutes <= 60) return 25;
-  const extraMinutes = minutes - 60;
+  if (minutes <= targetLimitMinutes) return 25;
+  const extraMinutes = minutes - targetLimitMinutes;
   const reduction = Math.floor(extraMinutes / 2);
   return Math.max(-5, 25 - reduction);
 }
 
 /**
- * 4. JAPA scoring
- * Rules:
- * Before 7:15 AM -> 25
- * Before Breakfast (~8:30 AM / 08:30) -> 20
- * Before 11:00 AM -> 15
- * Before 1:00 PM (13:00) -> 15
- * Before 2:30 PM (14:30) -> 10
- * Before 5:00 PM (17:00) -> 5
- * Before 7:00 PM (19:00) -> 0
- * Before 9:00 PM (21:00) -> -5
- * > 21:00 or incomplete -> -5
+ * 4. JAPA scoring with dynamic completion target time.
+ * Default target: 07:15 AM.
  */
-export function scoreJapa(timeStr?: string | null, roundsCount: number = 16): number {
+export function scoreJapa(
+  timeStr?: string | null,
+  roundsCount: number = 16,
+  targetTimeStr: string = '07:15'
+): number {
   if (roundsCount < 16 && roundsCount > 0) {
-    // Proportional or minimum penalty
     return Math.max(-5, Math.round((roundsCount / 16) * 10) - 5);
   }
   const min = parseTimeToMinutes(timeStr);
   if (min === null) return 0;
 
-  if (min <= 7 * 60 + 15) return 25;
-  if (min <= 8 * 60 + 30) return 20;
-  if (min <= 11 * 60 + 0) return 15;
-  if (min <= 13 * 60 + 0) return 15;
-  if (min <= 14 * 60 + 30) return 10;
-  if (min <= 17 * 60 + 0) return 5;
-  if (min <= 19 * 60 + 0) return 0;
+  const targetMin = parseTimeToMinutes(targetTimeStr) || (7 * 60 + 15);
+  const delta = targetMin - (7 * 60 + 15);
+
+  if (min <= 7 * 60 + 15 + delta) return 25;
+  if (min <= 8 * 60 + 30 + delta) return 20;
+  if (min <= 11 * 60 + 0 + delta) return 15;
+  if (min <= 13 * 60 + 0 + delta) return 15;
+  if (min <= 14 * 60 + 30 + delta) return 10;
+  if (min <= 17 * 60 + 0 + delta) return 5;
+  if (min <= 19 * 60 + 0 + delta) return 0;
   return -5;
 }
 
@@ -270,13 +274,17 @@ export function scoreAttendanceSlot(status?: string | null): number {
 }
 
 /**
- * Section Target Configurations
+ * Base Section Target Configurations
  */
 export const TARGET_CONFIG = {
   BRAHMACHARI_S1: {
     weeklyPathanMinutes: 7 * 60, // 420 mins = 7 hrs/week
     weeklySravanMinutes: 7 * 60, // 420 mins = 7 hrs/week
     weeklySevaMinutes: 42 * 60, // 2520 mins = 42 hrs/week
+    bedTime: '22:00',
+    wakeUpTime: '03:45',
+    daySleepLimit: 60,
+    japaTargetTime: '07:15',
     dailyMaxMarks: {
       bedTime: 25,
       wakeUp: 25,
@@ -289,7 +297,11 @@ export const TARGET_CONFIG = {
   STUDENT_S2: {
     weeklyPathanMinutes: 3.5 * 60, // 210 mins = 3.5 hrs/week
     weeklySravanMinutes: 3.5 * 60, // 210 mins = 3.5 hrs/week
-    weeklySevaMinutes: 6 * 60, // 360 mins = 6 hrs/week (3h preaching + 3h bace)
+    weeklySevaMinutes: 6 * 60, // 360 mins = 6 hrs/week
+    bedTime: '22:00',
+    wakeUpTime: '04:30',
+    daySleepLimit: 60,
+    japaTargetTime: '07:30',
     dailyMaxMarks: {
       bedTime: 25,
       wakeUp: 25,
@@ -302,12 +314,14 @@ export const TARGET_CONFIG = {
 };
 
 /**
- * Evaluates a single day's raw Sadhana entry and calculates derived scores.
+ * Evaluates a single day's raw Sadhana entry and calculates derived scores
+ * taking into account any personal rule overrides active on that date.
  */
 export function evaluateDailyEntry(
   entry: Partial<RawSadhanaEntry>,
   cardType: CardType = 'BRAHMACHARI_S1',
-  dateStr: string
+  dateStr: string,
+  effectiveRules?: EffectiveDayRules
 ): DailyScoredResult {
   const isSubmitted = Boolean(
     entry.sleepBedTime ||
@@ -320,27 +334,51 @@ export function evaluateDailyEntry(
       entry.sevaPreaching
   );
 
-  const cfg = TARGET_CONFIG[cardType];
-  const targetDailyPathan = Math.round(cfg.weeklyPathanMinutes / 7);
-  const targetDailySravan = Math.round(cfg.weeklySravanMinutes / 7);
-  const targetDailySeva = Math.round(cfg.weeklySevaMinutes / 7);
+  const baseCfg = TARGET_CONFIG[cardType];
+
+  // Resolve effective rules for this specific day
+  const effectiveBedTime = effectiveRules?.bedTime || baseCfg.bedTime;
+  const effectiveWakeUp = effectiveRules?.wakeUpTime || baseCfg.wakeUpTime;
+  const effectiveDaySleepLimit = effectiveRules?.daySleepLimit ?? baseCfg.daySleepLimit;
+  const effectiveJapaTarget = effectiveRules?.japaTargetTime || baseCfg.japaTargetTime;
+
+  const weeklyPathanMins = effectiveRules?.weeklyPathanHours
+    ? effectiveRules.weeklyPathanHours * 60
+    : baseCfg.weeklyPathanMinutes;
+  const weeklySravanMins = effectiveRules?.weeklySravanHours
+    ? effectiveRules.weeklySravanHours * 60
+    : baseCfg.weeklySravanMinutes;
+  const weeklySevaMins = effectiveRules?.weeklySevaHours
+    ? effectiveRules.weeklySevaHours * 60
+    : baseCfg.weeklySevaMinutes;
+
+  const targetDailyPathan = Math.round(weeklyPathanMins / 7);
+  const targetDailySravan = Math.round(weeklySravanMins / 7);
+  const targetDailySeva = Math.round(weeklySevaMins / 7);
+
+  const activeOvr = effectiveRules?.activeOverrides || {};
 
   // Nidra scores
-  const bedTimeMarks = entry.sleepBedTime ? scoreBedTime(entry.sleepBedTime) : 0;
-  const wakeUpMarks = entry.wakeUpTime ? scoreWakeUpTime(entry.wakeUpTime) : 0;
-  const daySleepMarks = entry.daySleepMinutes !== undefined && entry.daySleepMinutes !== null
-    ? scoreDaySleep(entry.daySleepMinutes)
-    : 0;
+  const bedTimeMarks = entry.sleepBedTime ? scoreBedTime(entry.sleepBedTime, effectiveBedTime) : 0;
+  const wakeUpMarks = entry.wakeUpTime ? scoreWakeUpTime(entry.wakeUpTime, effectiveWakeUp) : 0;
+  const daySleepMarks =
+    entry.daySleepMinutes !== undefined && entry.daySleepMinutes !== null
+      ? scoreDaySleep(entry.daySleepMinutes, effectiveDaySleepLimit)
+      : 0;
 
   const nidraObtained = bedTimeMarks + wakeUpMarks + daySleepMarks;
   const nidraMax = 75; // 25 + 25 + 25
-  const nidraPercentage = isSubmitted ? Math.max(0, Math.min(100, Math.round((nidraObtained / nidraMax) * 1000) / 10)) : 0;
+  const nidraPercentage = isSubmitted
+    ? Math.max(0, Math.min(100, Math.round((nidraObtained / nidraMax) * 1000) / 10))
+    : 0;
 
   // Japa score
   const japaMarks = entry.japaCompletionTime
-    ? scoreJapa(entry.japaCompletionTime, entry.japaRoundsCount || 16)
+    ? scoreJapa(entry.japaCompletionTime, entry.japaRoundsCount || 16, effectiveJapaTarget)
     : 0;
-  const japaPercentage = isSubmitted ? Math.max(0, Math.min(100, Math.round((japaMarks / 25) * 1000) / 10)) : 0;
+  const japaPercentage = isSubmitted
+    ? Math.max(0, Math.min(100, Math.round((japaMarks / 25) * 1000) / 10))
+    : 0;
 
   // Attendance score
   const maMarks = scoreAttendanceSlot(entry.mangalAarti);
@@ -349,7 +387,7 @@ export function evaluateDailyEntry(
   const gpMarks = cardType === 'BRAHMACHARI_S1' ? scoreAttendanceSlot(entry.guruPuja) : 0;
 
   const attendanceObtained = maMarks + sbMarks + prMarks + (cardType === 'BRAHMACHARI_S1' ? gpMarks : 0);
-  const attendanceMax = cfg.dailyMaxMarks.attendance;
+  const attendanceMax = baseCfg.dailyMaxMarks.attendance;
   const attendancePercentage = isSubmitted
     ? Math.max(0, Math.min(100, Math.round((attendanceObtained / attendanceMax) * 1000) / 10))
     : 0;
@@ -374,8 +412,6 @@ export function evaluateDailyEntry(
     if (entry.bhavanaPositiveTags) posTags = JSON.parse(entry.bhavanaPositiveTags);
   } catch {}
 
-  // Daily Overall % based on available scored categories
-  // Categories: Nidra (75), Japa (25), Attendance (15 or 20), Pathan ratio, Sravan ratio, Seva ratio
   const pathanPct = targetDailyPathan > 0 ? Math.min(100, ((entry.pathanMinutes || 0) / targetDailyPathan) * 100) : 100;
   const sravanPct = targetDailySravan > 0 ? Math.min(100, ((entry.sravanMinutes || 0) / targetDailySravan) * 100) : 100;
   const sevaPct = targetDailySeva > 0 ? Math.min(100, (totalSevaMinutes / targetDailySeva) * 100) : 100;
@@ -396,17 +432,38 @@ export function evaluateDailyEntry(
     date: dateStr,
     isSubmitted,
     raw: entry,
+    effectiveRules,
     scores: {
-      bedTime: { raw: entry.sleepBedTime || null, marks: bedTimeMarks, maxMarks: 25 },
-      wakeUp: { raw: entry.wakeUpTime || null, marks: wakeUpMarks, maxMarks: 25 },
-      daySleep: { rawMinutes: entry.daySleepMinutes || 0, marks: daySleepMarks, maxMarks: 25 },
+      bedTime: {
+        raw: entry.sleepBedTime || null,
+        target: effectiveBedTime,
+        marks: bedTimeMarks,
+        maxMarks: 25,
+        isOverridden: Boolean(activeOvr['BED_TIME']),
+      },
+      wakeUp: {
+        raw: entry.wakeUpTime || null,
+        target: effectiveWakeUp,
+        marks: wakeUpMarks,
+        maxMarks: 25,
+        isOverridden: Boolean(activeOvr['WAKE_UP_TIME']),
+      },
+      daySleep: {
+        rawMinutes: entry.daySleepMinutes || 0,
+        targetLimit: effectiveDaySleepLimit,
+        marks: daySleepMarks,
+        maxMarks: 25,
+        isOverridden: Boolean(activeOvr['DAY_SLEEP_LIMIT']),
+      },
       nidraTotal: { marks: nidraObtained, maxMarks: nidraMax, percentage: nidraPercentage },
       japa: {
         rawTime: entry.japaCompletionTime || null,
+        targetTime: effectiveJapaTarget,
         rounds: entry.japaRoundsCount || 16,
         marks: japaMarks,
         maxMarks: 25,
         percentage: japaPercentage,
+        isOverridden: Boolean(activeOvr['JAPA_TARGET_TIME']),
       },
       attendance: {
         mangalAarti: { status: entry.mangalAarti || 'ABSENT', marks: maMarks, maxMarks: 5 },
@@ -423,11 +480,13 @@ export function evaluateDailyEntry(
         actualMinutes: entry.pathanMinutes || 0,
         targetDailyMinutes: targetDailyPathan,
         bookName: entry.pathanBookName || undefined,
+        isOverridden: Boolean(activeOvr['PATHAN_WEEKLY_HOURS']),
       },
       sravan: {
         actualMinutes: entry.sravanMinutes || 0,
         targetDailyMinutes: targetDailySravan,
         topic: entry.sravanLectureTopic || undefined,
+        isOverridden: Boolean(activeOvr['SRAVAN_WEEKLY_HOURS']),
       },
       seva: {
         totalMinutes: totalSevaMinutes,
@@ -442,6 +501,7 @@ export function evaluateDailyEntry(
           misc: entry.sevaMisc || 0,
         },
         notes: entry.sevaNotes || undefined,
+        isOverridden: Boolean(activeOvr['SEVA_WEEKLY_HOURS']),
       },
       sevaBhavana: {
         negativeTags: Array.isArray(negTags) ? negTags : [],
@@ -456,7 +516,9 @@ export function evaluateDailyEntry(
 /**
  * Calculates grade band according to Excel rules
  */
-export function getGradeBand(percentage: number): 'High Honors' | 'Honors' | 'Distinction' | 'First Class' | 'Pass' | 'Needs Improvement' {
+export function getGradeBand(
+  percentage: number
+): 'High Honors' | 'Honors' | 'Distinction' | 'First Class' | 'Pass' | 'Needs Improvement' {
   if (percentage >= 100) return 'High Honors';
   if (percentage >= 95) return 'Honors';
   if (percentage >= 90) return 'Distinction';
@@ -466,7 +528,8 @@ export function getGradeBand(percentage: number): 'High Honors' | 'Honors' | 'Di
 }
 
 /**
- * Generates an interval-aware report for any arbitrary date range (e.g. from 2026-09-01 to 2026-09-15).
+ * Generates an interval-aware report for any arbitrary date range
+ * evaluating each day using the rule that was effective on that specific date.
  */
 export function generatePeriodReport(
   user: {
@@ -480,10 +543,10 @@ export function generatePeriodReport(
   },
   fromDate: string, // YYYY-MM-DD
   toDate: string, // YYYY-MM-DD
-  entries: Partial<RawSadhanaEntry>[]
+  entries: Partial<RawSadhanaEntry>[],
+  rulesByDateMap?: Map<string, EffectiveDayRules>
 ): PeriodReport {
   const cardType = user.cardType || 'BRAHMACHARI_S1';
-  const cfg = TARGET_CONFIG[cardType];
 
   // Build entry map by date
   const entryMap = new Map<string, Partial<RawSadhanaEntry>>();
@@ -499,6 +562,7 @@ export function generatePeriodReport(
 
   const dailyBreakdown: DailyScoredResult[] = [];
   let submittedDaysCount = 0;
+  let hasAnyCustomOverrides = false;
 
   // Cumulative totals
   let totalNidraMarks = 0;
@@ -511,8 +575,13 @@ export function generatePeriodReport(
   let maxAttendanceMarks = 0;
 
   let totalPathanMinutes = 0;
+  let totalTargetPathanMinutes = 0;
+
   let totalSravanMinutes = 0;
+  let totalTargetSravanMinutes = 0;
+
   let totalSevaMinutes = 0;
+  let totalTargetSevaMinutes = 0;
 
   const negativeTagFreq = new Map<string, number>();
   const positiveTagFreq = new Map<string, number>();
@@ -524,7 +593,13 @@ export function generatePeriodReport(
     const dateStr = currDate.toISOString().split('T')[0];
 
     const rawEntry = entryMap.get(dateStr) || { userId: user.id, date: dateStr };
-    const evaluated = evaluateDailyEntry(rawEntry, cardType, dateStr);
+    const dayRules = rulesByDateMap?.get(dateStr);
+
+    if (dayRules?.activeOverrides && Object.keys(dayRules.activeOverrides).length > 0) {
+      hasAnyCustomOverrides = true;
+    }
+
+    const evaluated = evaluateDailyEntry(rawEntry, cardType, dateStr, dayRules);
     dailyBreakdown.push(evaluated);
 
     if (evaluated.isSubmitted) {
@@ -542,8 +617,13 @@ export function generatePeriodReport(
     maxAttendanceMarks += evaluated.scores.attendance.maxMarks;
 
     totalPathanMinutes += evaluated.scores.pathan.actualMinutes;
+    totalTargetPathanMinutes += evaluated.scores.pathan.targetDailyMinutes;
+
     totalSravanMinutes += evaluated.scores.sravan.actualMinutes;
+    totalTargetSravanMinutes += evaluated.scores.sravan.targetDailyMinutes;
+
     totalSevaMinutes += evaluated.scores.seva.totalMinutes;
+    totalTargetSevaMinutes += evaluated.scores.seva.targetDailyMinutes;
 
     if (evaluated.scores.sevaBhavana.negativeTags.length > 0 || evaluated.scores.sevaBhavana.positiveTags.length > 0) {
       bhavanaLogsCount++;
@@ -558,22 +638,27 @@ export function generatePeriodReport(
 
   const missingDays = totalDays - submittedDaysCount;
 
-  // Interval-aware weekly target scaling: (totalDays / 7) * weekly target
-  const targetPathanMinutes = Math.round((totalDays / 7) * cfg.weeklyPathanMinutes);
-  const targetSravanMinutes = Math.round((totalDays / 7) * cfg.weeklySravanMinutes);
-  const targetSevaMinutes = Math.round((totalDays / 7) * cfg.weeklySevaMinutes);
-
   // Section Percentages
-  const nidraPct = maxNidraMarks > 0 ? Math.max(0, Math.min(100, Math.round((totalNidraMarks / maxNidraMarks) * 1000) / 10)) : 0;
-  const japaPct = maxJapaMarks > 0 ? Math.max(0, Math.min(100, Math.round((totalJapaMarks / maxJapaMarks) * 1000) / 10)) : 0;
+  const nidraPct =
+    maxNidraMarks > 0 ? Math.max(0, Math.min(100, Math.round((totalNidraMarks / maxNidraMarks) * 1000) / 10)) : 0;
+  const japaPct =
+    maxJapaMarks > 0 ? Math.max(0, Math.min(100, Math.round((totalJapaMarks / maxJapaMarks) * 1000) / 10)) : 0;
   const attendancePct =
-    maxAttendanceMarks > 0 ? Math.max(0, Math.min(100, Math.round((totalAttendanceMarks / maxAttendanceMarks) * 1000) / 10)) : 0;
+    maxAttendanceMarks > 0
+      ? Math.max(0, Math.min(100, Math.round((totalAttendanceMarks / maxAttendanceMarks) * 1000) / 10))
+      : 0;
   const pathanPct =
-    targetPathanMinutes > 0 ? Math.min(100, Math.round((totalPathanMinutes / targetPathanMinutes) * 1000) / 10) : 100;
+    totalTargetPathanMinutes > 0
+      ? Math.min(100, Math.round((totalPathanMinutes / totalTargetPathanMinutes) * 1000) / 10)
+      : 100;
   const sravanPct =
-    targetSravanMinutes > 0 ? Math.min(100, Math.round((totalSravanMinutes / targetSravanMinutes) * 1000) / 10) : 100;
+    totalTargetSravanMinutes > 0
+      ? Math.min(100, Math.round((totalSravanMinutes / totalTargetSravanMinutes) * 1000) / 10)
+      : 100;
   const sevaPct =
-    targetSevaMinutes > 0 ? Math.min(100, Math.round((totalSevaMinutes / targetSevaMinutes) * 1000) / 10) : 100;
+    totalTargetSevaMinutes > 0
+      ? Math.min(100, Math.round((totalSevaMinutes / totalTargetSevaMinutes) * 1000) / 10)
+      : 100;
 
   // Overall Weighted Score:
   // Nidra: 25%, Japa: 25%, Attendance: 20%, Pathan: 10%, Sravan: 10%, Seva: 10%
@@ -605,6 +690,7 @@ export function generatePeriodReport(
       missingDays,
       targetMode: 'PROPORTIONAL_TO_DAYS',
     },
+    hasCustomOverrides: hasAnyCustomOverrides,
     sections: {
       nidra: {
         section: 'NIDRA',
@@ -646,7 +732,7 @@ export function generatePeriodReport(
         daysSubmitted: submittedDaysCount,
         daysMissing: missingDays,
         actualMinutes: totalPathanMinutes,
-        targetMinutes: targetPathanMinutes,
+        targetMinutes: totalTargetPathanMinutes,
         percentage: pathanPct,
         statusGrade: getGradeBand(pathanPct),
       },
@@ -657,7 +743,7 @@ export function generatePeriodReport(
         daysSubmitted: submittedDaysCount,
         daysMissing: missingDays,
         actualMinutes: totalSravanMinutes,
-        targetMinutes: targetSravanMinutes,
+        targetMinutes: totalTargetSravanMinutes,
         percentage: sravanPct,
         statusGrade: getGradeBand(sravanPct),
       },
@@ -668,7 +754,7 @@ export function generatePeriodReport(
         daysSubmitted: submittedDaysCount,
         daysMissing: missingDays,
         actualMinutes: totalSevaMinutes,
-        targetMinutes: targetSevaMinutes,
+        targetMinutes: totalTargetSevaMinutes,
         percentage: sevaPct,
         statusGrade: getGradeBand(sevaPct),
       },
